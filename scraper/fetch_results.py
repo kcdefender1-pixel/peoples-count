@@ -22,6 +22,7 @@ HERE = pathlib.Path(__file__).parent
 OUT = HERE.parent / "results.json"
 COUNTY = HERE / "county.json"
 JUDGES = HERE / "judges.json"
+CONGRESS = HERE / "congress.json"
 CONTESTS = json.loads((HERE / "contests.json").read_text())
 
 def to_text(html):
@@ -146,7 +147,11 @@ def build():
     now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=-6))).strftime("%-I:%M %p CT")
     found = sum(1 for c in contests if c.get("in"))
     judges = json.loads(JUDGES.read_text()) if JUDGES.exists() else []
-    OUT.write_text(json.dumps({"updated": now, "contests": contests, "judges": judges, "matched": found}, indent=1))
+    out = {"updated": now, "contests": contests, "judges": judges, "matched": found}
+    # national balance of power, edited by hand from AP's seat counts
+    if CONGRESS.exists():
+        out["congress"] = json.loads(CONGRESS.read_text())
+    OUT.write_text(json.dumps(out, indent=1))
     print(f"wrote {OUT}: {found} contests with data, {len(blocks)} blocks parsed from SOS")
     if len(blocks) == 0:
         sys.exit("Parsed zero contests. Open the SOS page and adjust HEAD/ROW patterns.")
