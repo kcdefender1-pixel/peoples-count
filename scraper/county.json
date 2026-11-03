@@ -53,4 +53,3 @@
   ]
  }
 ]
-[{"id":"combat","group":"measures","short":"COMBAT","color":"cloud","kicker":"Jackson County · Question 1","title":"COMBAT","nick":"What is it, and should it be renewed?","stamp":"Your Call","stampKind":"norec","noLabel":"No · expire March 2027","yesLabel":"Yes · renew ten years","read":"We took no formal position, with a lean toward a pass. The fight that matters is the yearly split of the money.","source":"KCEB + JCEB","in":0,"of":0,"called":null,"options":[{"name":"Yes","votes":0},{"name":"No","votes":0}]},{"id":"exec","group":"races","short":"Jackson Exec","color":"mint","kicker":"Jackson County Executive","title":"Who Runs Jackson County","nick":"The first executive after the recall","source":"KCEB + JCEB","in":0,"of":0,"called":null,"options":[{"name":"Stacy Lake","party":"D","votes":0},{"name":"Alan Rohlfing","party":"R","votes":0}]}]
