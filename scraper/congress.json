@@ -1,0 +1,19 @@
+{
+ "source": "AP",
+ "house": {
+  "total": 435,
+  "majority": 218,
+  "dem": 0,
+  "rep": 0,
+  "other": 0,
+  "called": null
+ },
+ "senate": {
+  "total": 100,
+  "majority": 51,
+  "dem": 0,
+  "rep": 0,
+  "ind": 0,
+  "called": null
+ }
+}
