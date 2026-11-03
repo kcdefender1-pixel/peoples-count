@@ -54,7 +54,7 @@ def postback(opener, html, url):
     return opener.open(req, timeout=60).read().decode("utf-8", "ignore")
 
 def fetch_html():
-    last = None
+    tried = []
     for url in SOS_URLS:
         try:
             opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
@@ -65,10 +65,10 @@ def fetch_html():
                 html = postback(opener, html, resp.geturl())
             if "Precincts Reported" in to_text(html) or "electtable" in html:
                 return html
-            last = f"no results table in {url} (landed on {resp.geturl()})"
+            tried.append(f"{url}: no results table (landed on {resp.geturl()})")
         except Exception as e:
-            last = f"{url}: {e}"
-    raise SystemExit(f"Could not read SOS results: {last}")
+            tried.append(f"{url}: {e}")
+    raise SystemExit("Could not read SOS results:\n  " + "\n  ".join(tried))
 
 HEAD = re.compile(r"(?P<name>[A-Za-z0-9\.\'\-\u2019 ,&/]+?)\s+(?P<in>[\d,]+) of (?P<of>[\d,]+) Precincts Reported")
 ROW = re.compile(r"(?P<label>[A-Za-z][A-Za-z\.\'\-\u2019 ,\(\)]+?)\s+(?P<party>Republican|Democratic|Libertarian|Green|Constitution|Better|Write-in|Write-In)?\s*(?P<votes>[\d,]+)\s+(?P<pct>[\d\.]+)%")
