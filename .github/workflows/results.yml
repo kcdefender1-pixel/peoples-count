@@ -3,6 +3,10 @@ on:
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
+    inputs:
+      minutes:
+        description: "Keep refreshing for this many minutes (0 = one pull)"
+        default: "330"
 permissions:
   contents: write
 concurrency:
@@ -11,16 +15,32 @@ concurrency:
 jobs:
   pull:
     runs-on: ubuntu-latest
+    timeout-minutes: 345
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: python scraper/fetch_results.py
       - run: |
           git config user.name "peoples-count-bot"
           git config user.email "bot@kansascitydefender.com"
-          git add results.json
-          git commit -m "results $(date -u +%H:%M)Z" || exit 0
-          git pull --rebase
-          git push
+          # GitHub's 5-minute schedule is unreliable on busy nights, so a manual run
+          # keeps pulling every 3 minutes. It re-reads the repo each pass, so hand
+          # edits to county.json, judges.json, congress.json and calls are picked up.
+          end=$(( $(date +%s) + ${MINUTES:-0} * 60 ))
+          ok=0
+          while :; do
+            git pull --rebase --quiet || true
+            if python scraper/fetch_results.py; then
+              ok=1
+              git add results.json
+              if git commit -q -m "results $(date -u +%H:%M)Z"; then
+                git pull --rebase --quiet && git push --quiet || echo "push failed, retrying next pass"
+              fi
+            fi
+            [ "$(date +%s)" -lt "$end" ] || break
+            sleep 180
+          done
+          [ "$ok" = 1 ]
+        env:
+          MINUTES: ${{ github.event.inputs.minutes || '0' }}
