@@ -18,6 +18,10 @@ SOS_URLS = [
     "https://enr.sos.mo.gov/",
 ]
 
+# civicAPI's national roll-up races (seats per party, Senate includes seats not up in 2026)
+CIVIC_RACES = {"house": 87524, "senate": 87528}
+CIVIC_URL = "https://civicapi.org/api/v2/race/{}"
+
 HERE = pathlib.Path(__file__).parent
 OUT = HERE.parent / "results.json"
 COUNTY = HERE / "county.json"
@@ -123,6 +127,44 @@ def match_option(rows, option):
             return r["votes"]
     return None
 
+def fetch_congress(congress):
+    # Fill seat counts from civicAPI; on any failure keep the last good numbers
+    # from the previous results.json, else the hand-entered congress.json.
+    try:
+        prev = json.loads(OUT.read_text()).get("congress") or {}
+    except Exception:
+        prev = {}
+    for chamber, race_id in CIVIC_RACES.items():
+        ch = congress.get(chamber)
+        if ch is None:
+            continue
+        if prev.get(chamber):
+            ch.update(prev[chamber])
+        try:
+            req = urllib.request.Request(CIVIC_URL.format(race_id), headers={"User-Agent": "KCDefender-PeoplesCount/1.0 (+kansascitydefender.com)"})
+            race = json.loads(urllib.request.urlopen(req, timeout=45).read().decode("utf-8"))
+            if race.get("test_data"):
+                raise ValueError("race is marked as test data")
+            seats = {"Democratic": 0, "Republican": 0}
+            other = 0
+            for c in race.get("candidates") or []:
+                n = int(c.get("seats") or 0)
+                if c.get("party") in seats:
+                    seats[c["party"]] += n
+                else:
+                    other += n
+            ch["dem"], ch["rep"] = seats["Democratic"], seats["Republican"]
+            ch["ind" if "ind" in ch else "other"] = other
+            maj = ch.get("majority") or 0
+            if maj and ch["dem"] >= maj:
+                ch["called"] = "D"
+            elif maj and ch["rep"] >= maj:
+                ch["called"] = "R"
+            congress["source"] = "civicAPI"
+        except Exception as e:
+            print(f"civicAPI {chamber}: {e} (keeping last good numbers)")
+    return congress
+
 def build():
     html = fetch_html()
     blocks = parse(to_text(html)) or parse_table(html)
@@ -148,9 +190,9 @@ def build():
     found = sum(1 for c in contests if c.get("in"))
     judges = json.loads(JUDGES.read_text()) if JUDGES.exists() else []
     out = {"updated": now, "contests": contests, "judges": judges, "matched": found}
-    # national balance of power, edited by hand from AP's seat counts
+    # national balance of power from civicAPI, falling back to congress.json
     if CONGRESS.exists():
-        out["congress"] = json.loads(CONGRESS.read_text())
+        out["congress"] = fetch_congress(json.loads(CONGRESS.read_text()))
     OUT.write_text(json.dumps(out, indent=1))
     print(f"wrote {OUT}: {found} contests with data, {len(blocks)} blocks parsed from SOS")
     if len(blocks) == 0:
